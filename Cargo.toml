@@ -1,0 +1,12 @@
+[package]
+name = "parajpeg"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "parajpeg (anniigr/parajpeg) for Rust: a parallel, bit-exact JPEG decoder. The fork adds this manifest, the build script and the C shim; the C++ sources are upstream's."
+publish = false
+
+[dependencies]
+
+[build-dependencies]
+cc = "1"
