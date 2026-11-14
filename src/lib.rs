@@ -85,6 +85,25 @@ mod tests {
     }
 
     #[test]
+    fn decodes_on_several_threads_at_once_all_finish() {
+        // parajpeg's shared thread pool runs one parallel job at a time; without the shim's lock, these hang. The
+        // 640 × 480 picture is large enough for its parallel path.
+        const PLASMA: &[u8] = include_bytes!("../tests/fixtures/plasma-420.jpg");
+        let head = header(PLASMA).expect("the fixture's header");
+        let workers: Vec<_> = (0..4)
+            .map(|_| {
+                std::thread::spawn(move || {
+                    let mut out = vec![0u8; head.rgb_len()];
+                    (0..20).all(|_| decode_rgb(PLASMA, 3, head, &mut out))
+                })
+            })
+            .collect();
+        for worker in workers {
+            assert!(worker.join().expect("the worker didn't panic"));
+        }
+    }
+
+    #[test]
     fn a_truncated_stream_is_refused_or_decoded_without_panicking() {
         let head = header(SMALL).expect("the fixture's header");
         let mut out = vec![0u8; head.rgb_len()];

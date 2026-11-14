@@ -4,6 +4,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
+
+// parajpeg's CPU decoder shares one thread pool (decoder.cpp's shared_pool), and the pool runs one parallel job at a
+// time: its single job slot is overwritten by a second caller, whose workers then never finish the first's job. Two
+// decodes on several threads at once therefore hang. The decodes are serialized here; the header read doesn't use
+// the pool, so it needs no lock.
+static std::mutex decode_lock;
 
 extern "C" {
 
@@ -29,6 +36,7 @@ int parajpeg_shim_decode_rgb(const uint8_t* data, size_t size, int threads, uint
         options.format = parajpeg::PixelFormat::RGB;
         options.backend = parajpeg::Backend::Cpu;
         options.threads = threads;
+        std::lock_guard<std::mutex> lock(decode_lock);
         return parajpeg::decode_into(data, size, options, dst, stride) ? 0 : 1;
     } catch (...) {
         return 2;
